@@ -15,14 +15,14 @@ from domain.services.boleta import BoletaService
 from domain.services.pdf import PDFService
 
 
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwe, jwt
 from core.security import SECRET_KEY, ALGORITHM, decode_access_token
 from persistencia.models import User
 from persistencia.repositories.user import UserRepository
 from fastapi import HTTPException, status
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+security = HTTPBearer()
 
 def get_db() -> Generator:
     db = SessionLocal()
@@ -34,13 +34,14 @@ def get_db() -> Generator:
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    token = credentials.credentials
     payload = decode_access_token(token)
     if payload is None:
         raise credentials_exception

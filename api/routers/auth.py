@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+# from fastapi.security import OAuth2PasswordRequestForm # Removing form-data dependency
 from sqlalchemy.orm import Session
 from api import deps
-from domain.schemas.user import UserCreate, UserResponse, Token, PasswordResetRequest, PasswordResetConfirm
+from domain.schemas.user import UserCreate, UserLogin, UserResponse, Token, PasswordResetRequest, PasswordResetConfirm
 from persistencia.repositories.user import UserRepository
 from core.security import create_access_token, verify_password, get_password_hash
 from datetime import timedelta
@@ -19,10 +19,11 @@ def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
     return repo.create(user_in)
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(deps.get_db)):
+def login(login_data: UserLogin, db: Session = Depends(deps.get_db)):
     repo = UserRepository(db)
-    user = repo.get_by_username(form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    
+    user = repo.get_by_username(login_data.username)
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

@@ -1,12 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
 
+hidden_imports = collect_submodules('reportlab') + collect_submodules('xhtml2pdf')
 
 a = Analysis(
     ['run.py'],
     pathex=[],
     binaries=[],
     datas=[('domain/templates', 'domain/templates')],
-    hiddenimports=[],
+    hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

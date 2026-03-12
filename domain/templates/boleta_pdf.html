@@ -209,9 +209,9 @@
                 <td colspan="4" class="r" style="font-size: 3pt; padding-right: 2pt; line-height: 1.0;">FECHA DE LA<br>EVALUACIÓN</td>
             </tr>
             <tr>
-                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td>
-                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td>
-                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td>
+                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc b"></td>
+                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc b"></td>
+                <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc b"></td>
                 <td colspan="4" class="r" style="font-size: 3pt; padding-right: 2pt;">FINAL</td>
             </tr>
         </tbody>
@@ -243,14 +243,15 @@
                         <tr>
                             <td class="mc">{{ cal.materia.nombre }}</td>
                             <td class="gc b">{{ cal.def_final if cal.def_final is not none else (cal.lapso_3_def if cal.lapso_3_def is not none else (cal.lapso_2_def if cal.lapso_2_def is not none else (cal.lapso_1_def if cal.lapso_1_def is not none else ''))) }}</td>
-                            <td class="gc"></td>
+                            <td class="gc b">{{ boleta.media_seccion if boleta.media_seccion is not none else '' }}</td>
                             <td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td><td class="gc"></td>
                         </tr>
                         {% endfor %}
                         <tr class="bg">
                             <td class="mc r b">MEDIAS GLOBALES</td>
                             <td class="gc b">{{ boleta.medias_globales if boleta.medias_globales is not none else (boleta.media_lapso_3 if boleta.media_lapso_3 is not none else (boleta.media_lapso_2 if boleta.media_lapso_2 is not none else (boleta.media_lapso_1 if boleta.media_lapso_1 is not none else ''))) }}</td>
-                            <td class="gc" colspan="7"></td>
+                            <td class="gc b">{{ boleta.media_seccion if boleta.media_seccion is not none else '' }}</td>
+                            <td class="gc" colspan="6"></td>
                         </tr>
                     </tbody>
                 </table>

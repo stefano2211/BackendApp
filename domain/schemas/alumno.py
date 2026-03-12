@@ -13,6 +13,8 @@ class AlumnoBase(BaseModel):
     estado_nacimiento: Optional[str] = None
     nombre_representante: Optional[str] = None
     direccion_representante: Optional[str] = None
+    grado: Optional[int] = None
+    seccion: Optional[str] = None
 
 
 class AlumnoCreate(AlumnoBase):

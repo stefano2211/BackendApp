@@ -10,34 +10,9 @@ class BoletaRepository:
         self.session = session
 
     def create(self, boleta_in: BoletaCreate) -> Boleta:
-        db_boleta = Boleta(
-            alumno_id=boleta_in.alumno_id,
-            anio_escolar=boleta_in.anio_escolar,
-            grado=boleta_in.grado,
-            seccion=boleta_in.seccion,
-            numero_lista=boleta_in.numero_lista,
-            tipo_evaluacion=boleta_in.tipo_evaluacion,
-            observaciones=boleta_in.observaciones,
-            media_lapso_1=boleta_in.media_lapso_1,
-            media_lapso_2=boleta_in.media_lapso_2,
-            media_lapso_3=boleta_in.media_lapso_3,
-            medias_globales=boleta_in.medias_globales,
-            profesor=boleta_in.profesor,
-            nombre_plantel=boleta_in.nombre_plantel,
-            direccion_plantel=boleta_in.direccion_plantel,
-        )
-
-        # Crear calificaciones asociadas
-        for calif_in in boleta_in.calificaciones:
-            db_calif = Calificacion(
-                materia_id=calif_in.materia_id,
-                lapso_1_def=calif_in.lapso_1_def,
-                lapso_2_def=calif_in.lapso_2_def,
-                lapso_3_def=calif_in.lapso_3_def,
-                def_final=calif_in.def_final,
-                literal=calif_in.literal,
-            )
-            db_boleta.calificaciones.append(db_calif)
+        # Usar model_dump para evitar mapeo manual propenso a errores
+        data = boleta_in.model_dump()
+        db_boleta = Boleta(**data)
 
         self.session.add(db_boleta)
         self.session.commit()
@@ -50,7 +25,6 @@ class BoletaRepository:
             .where(Boleta.id == boleta_id)
             .options(
                 joinedload(Boleta.alumno),
-                joinedload(Boleta.calificaciones).joinedload(Calificacion.materia),
             )
         )
         return self.session.scalars(stmt).first()

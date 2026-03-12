@@ -3,8 +3,8 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 
 
-class Nota(Base):
-    __tablename__ = "notas"
+class Tarea(Base):
+    __tablename__ = "tareas"
 
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String, index=True)
@@ -25,8 +25,11 @@ class Alumno(Base):
     estado_nacimiento = Column(String, nullable=True)
     nombre_representante = Column(String, nullable=True)
     direccion_representante = Column(String, nullable=True)
+    grado = Column(Integer, nullable=True) # Grado actual
+    seccion = Column(String, nullable=True) # Sección actual
 
     boletas = relationship("Boleta", back_populates="alumno", cascade="all, delete-orphan")
+    calificaciones = relationship("Calificacion", back_populates="alumno", cascade="all, delete-orphan")
 
 
 class Materia(Base):
@@ -55,28 +58,30 @@ class Boleta(Base):
     media_lapso_2 = Column(Float, nullable=True)
     media_lapso_3 = Column(Float, nullable=True)
     medias_globales = Column(Float, nullable=True)
+    media_seccion = Column(Float, nullable=True)
     profesor = Column(String, nullable=True)
     nombre_plantel = Column(String, nullable=True)
     direccion_plantel = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     alumno = relationship("Alumno", back_populates="boletas")
-    calificaciones = relationship("Calificacion", back_populates="boleta", cascade="all, delete-orphan")
 
 
 class Calificacion(Base):
     __tablename__ = "calificaciones"
 
     id = Column(Integer, primary_key=True, index=True)
-    boleta_id = Column(Integer, ForeignKey("boletas.id"), nullable=False)
+    alumno_id = Column(Integer, ForeignKey("alumnos.id"), nullable=False)
     materia_id = Column(Integer, ForeignKey("materias.id"), nullable=False)
+    anio_escolar = Column(String, nullable=False, index=True)
     lapso_1_def = Column(Integer, nullable=True)
     lapso_2_def = Column(Integer, nullable=True)
     lapso_3_def = Column(Integer, nullable=True)
     def_final = Column(Integer, nullable=True)
     literal = Column(String, nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    boleta = relationship("Boleta", back_populates="calificaciones")
+    alumno = relationship("Alumno", back_populates="calificaciones")
     materia = relationship("Materia", back_populates="calificaciones")
 
 
@@ -89,3 +94,15 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class Configuracion(Base):
+    __tablename__ = "configuracion"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_plantel = Column(String, nullable=True)
+    direccion_plantel = Column(String, nullable=True)
+    anio_escolar_actual = Column(String, nullable=True)
+    profesor_guia_default = Column(String, nullable=True)
+    # Solo debería existir un registro (Singleton) para esta tabla.
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

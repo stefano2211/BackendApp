@@ -3,21 +3,24 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from core.database import SessionLocal
 
-from persistencia.repositories.nota import NotaRepository
+from persistencia.repositories.tarea import TareaRepository
 from persistencia.repositories.alumno import AlumnoRepository
 from persistencia.repositories.materia import MateriaRepository
+from persistencia.repositories.calificacion import CalificacionRepository
 from persistencia.repositories.boleta import BoletaRepository
+from persistencia.repositories.configuracion import ConfiguracionRepository
 
-from domain.services.nota import NotaService
+from domain.services.tarea import TareaService
 from domain.services.alumno import AlumnoService
 from domain.services.materia import MateriaService
+from domain.services.calificacion import CalificacionService
 from domain.services.boleta import BoletaService
 from domain.services.pdf import PDFService
+from domain.services.configuracion import ConfiguracionService
 
 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwe, jwt
-from core.security import SECRET_KEY, ALGORITHM, decode_access_token
+from core.security import decode_access_token
 from persistencia.models import User
 from persistencia.repositories.user import UserRepository
 from fastapi import HTTPException, status
@@ -62,12 +65,12 @@ def get_pdf_service() -> PDFService:
     return PDFService()
 
 
-# --- Notas ---
-def get_nota_repository(db: Session = Depends(get_db)) -> NotaRepository:
-    return NotaRepository(db)
+# --- Tareas (Ex-Notas) ---
+def get_tarea_repository(db: Session = Depends(get_db)) -> TareaRepository:
+    return TareaRepository(db)
 
-def get_nota_service(repository: NotaRepository = Depends(get_nota_repository)) -> NotaService:
-    return NotaService(repository)
+def get_tarea_service(repository: TareaRepository = Depends(get_tarea_repository)) -> TareaService:
+    return TareaService(repository)
 
 
 # --- Alumnos ---
@@ -86,9 +89,33 @@ def get_materia_service(repository: MateriaRepository = Depends(get_materia_repo
     return MateriaService(repository)
 
 
+# --- Configuracion ---
+def get_configuracion_repository(db: Session = Depends(get_db)) -> ConfiguracionRepository:
+    return ConfiguracionRepository(db)
+
+def get_configuracion_service(repository: ConfiguracionRepository = Depends(get_configuracion_repository)) -> ConfiguracionService:
+    return ConfiguracionService(repository)
+
+
+# --- Calificaciones ---
+def get_calificacion_repository(db: Session = Depends(get_db)) -> CalificacionRepository:
+    return CalificacionRepository(db)
+
+def get_calificacion_service(
+    repository: CalificacionRepository = Depends(get_calificacion_repository),
+    config_repo: ConfiguracionRepository = Depends(get_configuracion_repository)
+) -> CalificacionService:
+    return CalificacionService(repository, config_repo)
+
+
 # --- Boletas ---
 def get_boleta_repository(db: Session = Depends(get_db)) -> BoletaRepository:
     return BoletaRepository(db)
 
-def get_boleta_service(repository: BoletaRepository = Depends(get_boleta_repository)) -> BoletaService:
-    return BoletaService(repository)
+def get_boleta_service(
+    repository: BoletaRepository = Depends(get_boleta_repository),
+    calif_repo: CalificacionRepository = Depends(get_calificacion_repository),
+    config_repo: ConfiguracionRepository = Depends(get_configuracion_repository),
+    alumno_repo: AlumnoRepository = Depends(get_alumno_repository)
+) -> BoletaService:
+    return BoletaService(repository, calif_repo, config_repo, alumno_repo)

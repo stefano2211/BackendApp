@@ -148,15 +148,26 @@
     <div style="height: 5pt;"></div>
 
     <!-- GRADES TABLE -->
+    {% set eval_type = boleta.tipo_evaluacion %}
+    {% set show_l2 = eval_type not in ['1er Lapso'] %}
+    {% set show_l3 = eval_type not in ['1er Lapso', '2do Lapso'] %}
+    {% set show_final = eval_type not in ['1er Lapso', '2do Lapso'] %}
+
     <table>
         <thead>
             <tr class="bg-gray">
                 <th rowspan="2" class="w-subject">MATERIAS</th>
                 <th colspan="5" class="lapso-title center" style="width: 75pt;">1er LAPSO</th>
+                {% if show_l2 %}
                 <th colspan="5" class="lapso-title center" style="width: 75pt;">2do LAPSO</th>
+                {% endif %}
+                {% if show_l3 %}
                 <th colspan="5" class="lapso-title center" style="width: 75pt;">3er LAPSO</th>
+                {% endif %}
+                {% if show_final %}
                 <th rowspan="2" class="w-meta">DEF</th>
                 <th rowspan="2" class="w-meta">REV</th>
+                {% endif %}
             </tr>
             <tr class="bg-gray">
                 <!-- L1 -->
@@ -165,18 +176,22 @@
                 <th class="w-grade tiny-text center">AC</th>
                 <th class="w-grade tiny-text center">PB</th>
                 <th class="w-grade tiny-text center">DF</th>
+                {% if show_l2 %}
                 <!-- L2 -->
                 <th class="w-grade tiny-text center">P1</th>
                 <th class="w-grade tiny-text center">P2</th>
                 <th class="w-grade tiny-text center">AC</th>
                 <th class="w-grade tiny-text center">PB</th>
                 <th class="w-grade tiny-text center">DF</th>
+                {% endif %}
+                {% if show_l3 %}
                 <!-- L3 -->
                 <th class="w-grade tiny-text center">P1</th>
                 <th class="w-grade tiny-text center">P2</th>
                 <th class="w-grade tiny-text center">AC</th>
                 <th class="w-grade tiny-text center">PB</th>
                 <th class="w-grade tiny-text center">DF</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -190,6 +205,7 @@
                 <td></td>
                 <td class="center value">{{ cal.lapso_1_def if cal.lapso_1_def is not none else (cal.literal if not
                     cal.materia.es_numerica else '') }}</td>
+                {% if show_l2 %}
                 <!-- L2 -->
                 <td></td>
                 <td></td>
@@ -197,6 +213,8 @@
                 <td></td>
                 <td class="center value">{{ cal.lapso_2_def if cal.lapso_2_def is not none else (cal.literal if not
                     cal.materia.es_numerica else '') }}</td>
+                {% endif %}
+                {% if show_l3 %}
                 <!-- L3 -->
                 <td></td>
                 <td></td>
@@ -204,20 +222,30 @@
                 <td></td>
                 <td class="center value">{{ cal.lapso_3_def if cal.lapso_3_def is not none else (cal.literal if not
                     cal.materia.es_numerica else '') }}</td>
+                {% endif %}
+                {% if show_final %}
                 <!-- DEF -->
                 <td class="center value">{{ cal.def_final or '' }}</td>
                 <td></td>
+                {% endif %}
             </tr>
             {% endfor %}
             <tr class="bg-gray">
                 <td class="w-subject">MEDIAS GLOBALES</td>
                 <td colspan="4"></td>
+                <td class="center value">{{ boleta.media_lapso_1 or '' }}</td>
+                {% if show_l2 %}
+                <td colspan="4"></td>
+                <td class="center value">{{ boleta.media_lapso_2 or '' }}</td>
+                {% endif %}
+                {% if show_l3 %}
+                <td colspan="4"></td>
+                <td class="center value">{{ boleta.media_lapso_3 or '' }}</td>
+                {% endif %}
+                {% if show_final %}
                 <td class="center value">{{ boleta.medias_globales or '' }}</td>
-                <td colspan="4"></td>
-                <td class="center"></td>
-                <td colspan="4"></td>
-                <td class="center"></td>
-                <td colspan="2"></td>
+                <td></td>
+                {% endif %}
             </tr>
         </tbody>
     </table>

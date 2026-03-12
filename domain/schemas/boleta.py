@@ -47,6 +47,9 @@ class BoletaBase(BaseModel):
     numero_lista: Optional[int] = None
     tipo_evaluacion: str
     observaciones: Optional[str] = None
+    media_lapso_1: Optional[float] = None
+    media_lapso_2: Optional[float] = None
+    media_lapso_3: Optional[float] = None
     medias_globales: Optional[float] = None
     profesor: Optional[str] = None
     nombre_plantel: Optional[str] = None
@@ -64,6 +67,9 @@ class BoletaUpdate(BaseModel):
     numero_lista: Optional[int] = None
     tipo_evaluacion: Optional[str] = None
     observaciones: Optional[str] = None
+    media_lapso_1: Optional[float] = None
+    media_lapso_2: Optional[float] = None
+    media_lapso_3: Optional[float] = None
     medias_globales: Optional[float] = None
     profesor: Optional[str] = None
     nombre_plantel: Optional[str] = None

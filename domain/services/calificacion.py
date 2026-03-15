@@ -1,3 +1,4 @@
+from typing import List, Optional
 from domain.schemas.calificacion import CalificacionCreate, CalificacionUpdate, CalificacionResponse, LapsoNotaInput
 from persistencia.repositories.calificacion import CalificacionRepository
 from persistencia.repositories.configuracion import ConfiguracionRepository

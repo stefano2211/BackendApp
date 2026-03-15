@@ -7,6 +7,9 @@ class MateriaService:
     def __init__(self, repository: MateriaRepository):
         self.repository = repository
 
+    def contar_materias(self) -> int:
+        return self.repository.count()
+
     def crear_materia(self, materia_in: MateriaCreate) -> MateriaResponse:
         db_materia = self.repository.create(materia_in)
         return MateriaResponse.model_validate(db_materia)

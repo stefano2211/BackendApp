@@ -7,6 +7,9 @@ class AlumnoService:
     def __init__(self, repository: AlumnoRepository):
         self.repository = repository
 
+    def contar_alumnos(self) -> int:
+        return self.repository.count()
+
     def crear_alumno(self, alumno_in: AlumnoCreate) -> AlumnoResponse:
         db_alumno = self.repository.create(alumno_in)
         return AlumnoResponse.model_validate(db_alumno)

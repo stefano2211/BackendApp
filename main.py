@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.database import engine, Base
-from api.routers import alumnos, materias, boletas, auth, calificaciones, tareas, configuracion
+from api.routers import alumnos, materias, boletas, auth, calificaciones, tareas, configuracion, dashboard
 from api.deps import get_current_user
 from fastapi import Depends
 
@@ -40,6 +40,7 @@ app.include_router(materias.router, prefix="/materias", tags=["materias"], depen
 app.include_router(calificaciones.router, prefix="/calificaciones", tags=["calificaciones"], dependencies=[Depends(get_current_user)])
 app.include_router(boletas.router, prefix="/boletas", tags=["boletas"], dependencies=[Depends(get_current_user)])
 app.include_router(configuracion.router, prefix="/configuracion", tags=["configuracion"], dependencies=[Depends(get_current_user)])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def read_root():

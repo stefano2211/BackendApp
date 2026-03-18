@@ -4,10 +4,15 @@ from sqlalchemy.orm import Session
 from api import deps
 from domain.schemas.user import UserCreate, UserLogin, UserResponse, Token, PasswordResetRequest, PasswordResetConfirm
 from persistencia.repositories.user import UserRepository
+from persistencia.models import User
 from core.security import create_access_token, verify_password, get_password_hash
 from datetime import timedelta
 
 router = APIRouter()
+
+@router.get("/me", response_model=UserResponse)
+def get_current_user_info(current_user: User = Depends(deps.get_current_user)):
+    return current_user
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import List, Optional
 from persistencia.models import Boleta, Calificacion
 from domain.schemas.boleta import BoletaCreate, BoletaUpdate
@@ -8,6 +8,10 @@ from domain.schemas.boleta import BoletaCreate, BoletaUpdate
 class BoletaRepository:
     def __init__(self, session: Session):
         self.session = session
+
+    def count(self) -> int:
+        stmt = select(func.count()).select_from(Boleta)
+        return self.session.scalars(stmt).first() or 0
 
     def create(self, boleta_data: dict) -> Boleta:
         # Crea la boleta a partir de un diccionario que ya contiene los calculos

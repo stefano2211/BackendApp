@@ -1,7 +1,7 @@
 from typing import List, Optional
 from persistencia.models import Alumno
 from domain.schemas.boleta import BoletaCreate, BoletaUpdate, BoletaResponse, BoletaListResponse
-from domain.schemas.calificacion import CalificacionResponse
+from domain.schemas.calificacion import CalificacionResponse, CalificacionUpdate
 from persistencia.repositories.boleta import BoletaRepository
 from persistencia.repositories.calificacion import CalificacionRepository
 from persistencia.repositories.configuracion import ConfiguracionRepository
@@ -21,11 +21,16 @@ class BoletaService:
         self.config_repo = config_repo
         self.alumno_repo = alumno_repo
 
+    def contar_boletas(self) -> int:
+        return self.repository.count()
+
     def crear_boleta(self, boleta_in: BoletaCreate) -> BoletaResponse:
         try:
             # 1. Obtener Configuración y Alumno
             config = self.config_repo.get_config()
             alumno = self.alumno_repo.get_by_id(boleta_in.alumno_id)
+            
+            print(f"DEBUG: Alumno encontrado - id: {alumno.id if alumno else 'None'}, grado: {alumno.grado if alumno else 'None'}, seccion: '{alumno.seccion if alumno else 'None'}'")
             
             # Convertir a dicc para manipulacion interna (campos calculados)
             data = boleta_in.model_dump()
@@ -42,12 +47,27 @@ class BoletaService:
                 if data.get("grado") is None: data["grado"] = alumno.grado if alumno.grado else 1
                 if data.get("seccion") is None: data["seccion"] = alumno.seccion if alumno.seccion else "A"
                 if data.get("numero_lista") is None: data["numero_lista"] = alumno.numero_lista
+                
+                # ACTUALIZAR ALUMNO si tiene valores None
+                needs_update = False
+                if alumno.grado is None and data.get("grado") is not None:
+                    alumno.grado = data["grado"]
+                    needs_update = True
+                if alumno.seccion is None and data.get("seccion") is not None:
+                    alumno.seccion = data["seccion"]
+                    needs_update = True
+                    
+                if needs_update:
+                    self.alumno_repo.session.commit()
+                    print(f"DEBUG: Alumno {alumno.id} actualizado - grado: {alumno.grado}, seccion: '{alumno.seccion}'")
             
             # 4. Fallback final para evitar IntegrityError
             if data.get("grado") is None: data["grado"] = 1
             if data.get("seccion") is None: data["seccion"] = "A"
             if not data.get("anio_escolar"): data["anio_escolar"] = "2024-2025"
             if not data.get("tipo_evaluacion"): data["tipo_evaluacion"] = "Final de Lapso"
+            
+            print(f"DEBUG: Valores finales para crear boleta - grado: {data['grado']}, seccion: '{data['seccion']}', anio_escolar: '{data['anio_escolar']}'")
 
             # 5. Buscar las calificaciones existentes para este alumno y año
             calificaciones_db = self.calif_repo.get_all_by_alumno_year(
@@ -81,9 +101,21 @@ class BoletaService:
             for c in calificaciones_db:
                 c_res = CalificacionResponse.model_validate(c)
                 # Inyectar media de sección específica
-                c_res.media_seccion = medias_materia.get(c.materia_id)
+                media_seccion_val = medias_materia.get(c.materia_id, 0.0)
+                c_res.media_seccion = media_seccion_val
+                print(f"DEBUG: Materia {c.materia_id} - media_seccion: {media_seccion_val}")
                 calificaciones_response.append(c_res)
-                
+            
+            # Asignar media de sección global a la boleta
+            if medias_materia:
+                media_global = round(sum(medias_materia.values()) / len(medias_materia), 2)
+                print(f"DEBUG: Calculando media global - sum: {sum(medias_materia.values())}, count: {len(medias_materia)}, media: {media_global}")
+                response.media_seccion = media_global
+            else:
+                print(f"DEBUG: medias_materia está vacío, asignando 0")
+                response.media_seccion = 0.0
+            
+            print(f"DEBUG: Boleta media_seccion final: {response.media_seccion}")
             response.calificaciones = calificaciones_response
             return response
         except Exception as e:
@@ -136,28 +168,52 @@ class BoletaService:
 
     def _calcular_medias_seccion_por_materia(self, grado: int, seccion: str, anio: str, hasta_lapso: int) -> dict:
         """Calcula el promedio de la sección materia por materia."""
+        print(f"DEBUG: _calcular_medias_seccion_por_materia llamado con grado={grado}, seccion={seccion}, anio={anio}, hasta_lapso={hasta_lapso}")
+        
         # 1. Alumnos de la sección
         alumnos = self.alumno_repo.session.query(Alumno).filter(
             Alumno.grado == grado, Alumno.seccion == seccion
         ).all()
         
-        if not alumnos: return {}
+        print(f"DEBUG: Alumnos encontrados en sección {grado}-{seccion}: {len(alumnos)}")
+        if not alumnos: 
+            print(f"DEBUG: No se encontraron alumnos para calcular media de sección")
+            return {}
         
         # 2. Mapa de sumas por materia {materia_id: [notas]}
         mapa_notas = {}
+        print(f"DEBUG: Procesando {len(alumnos)} alumnos de la sección")
+        
         for al in alumnos:
+            print(f"DEBUG: Procesando alumno {al.id} - {al.nombre if hasattr(al, 'nombre') else 'N/A'}")
             califs = self.calif_repo.get_all_by_alumno_year(al.id, anio)
+            print(f"DEBUG: Alumno {al.id} tiene {len(califs)} calificaciones")
+            
             for c in califs:
-                if not c.materia or not c.materia.es_numerica: continue
+                print(f"DEBUG: Calificación - materia_id: {c.materia_id}, es_numerica: {c.materia.es_numerica if c.materia else 'None'}, lapso_1: {c.lapso_1_def}, lapso_2: {c.lapso_2_def}, lapso_3: {c.lapso_3_def}, def_final: {c.def_final}")
+                
+                if not c.materia: 
+                    print(f"DEBUG: Ignorando materia {c.materia_id} - no tiene materia asociada")
+                    continue
+                    
+                if not c.materia.es_numerica: 
+                    print(f"DEBUG: Ignorando materia {c.materia_id} - no es numérica (es_numerica: {c.materia.es_numerica})")
+                    continue
+                    
                 # Determinamos que nota usar segun hasta_lapso
                 nota = None
                 if hasta_lapso == 1: nota = c.lapso_1_def
                 elif hasta_lapso == 2: nota = c.lapso_2_def
                 else: nota = c.def_final # Lapso 3 o Final
                 
+                print(f"DEBUG: Nota seleccionada para materia {c.materia_id}: {nota}")
+                
                 if nota is not None:
                     if c.materia_id not in mapa_notas: mapa_notas[c.materia_id] = []
                     mapa_notas[c.materia_id].append(nota)
+                    print(f"DEBUG: Agregada nota {nota} a materia {c.materia_id}")
+                else:
+                    print(f"DEBUG: Ignorando materia {c.materia_id} - nota es None")
         
         # 3. Calcular promedios
         resultados = {}
@@ -165,6 +221,7 @@ class BoletaService:
             if notas:
                 resultados[m_id] = round(sum(notas) / len(notas), 2)
         
+        print(f"DEBUG: _calcular_medias_seccion_por_materia - alumnos encontrados: {len(alumnos)}, mapa_notas: {mapa_notas}, resultados: {resultados}")
         return resultados
 
     def obtener_boleta(self, boleta_id: int) -> Optional[BoletaResponse]:
@@ -172,6 +229,22 @@ class BoletaService:
         if not db_boleta: return None
         
         response = BoletaResponse.model_validate(db_boleta)
+        
+        # ACTUALIZAR ALUMNO si tiene valores None (usando datos de la boleta)
+        alumno = self.alumno_repo.get_by_id(db_boleta.alumno_id)
+        if alumno:
+            needs_update = False
+            if alumno.grado is None and db_boleta.grado is not None:
+                alumno.grado = db_boleta.grado
+                needs_update = True
+            if alumno.seccion is None and db_boleta.seccion is not None:
+                alumno.seccion = db_boleta.seccion
+                needs_update = True
+                
+            if needs_update:
+                self.alumno_repo.session.commit()
+                print(f"DEBUG obtener_boleta: Alumno {alumno.id} actualizado - grado: {alumno.grado}, seccion: '{alumno.seccion}'")
+        
         califs_db = self.calif_repo.get_all_by_alumno_year(
             db_boleta.alumno_id, db_boleta.anio_escolar
         )
@@ -185,9 +258,14 @@ class BoletaService:
         for c in califs_db:
             c_res = CalificacionResponse.model_validate(c)
             # Inyectar media de sección específica de esta materia
-            c_res.media_seccion = medias_materia.get(c.materia_id)
+            media_seccion_val = medias_materia.get(c.materia_id, 0.0)
+            c_res.media_seccion = media_seccion_val
+            print(f"DEBUG obtener_boleta: Materia {c.materia_id} - media_seccion: {media_seccion_val}")
             calificaciones_response.append(c_res)
             
+        # Asignar media de sección global a la boleta
+        response.media_seccion = round(sum(medias_materia.values()) / len(medias_materia), 2) if medias_materia else 0.0
+        print(f"DEBUG obtener_boleta: Boleta media_seccion: {response.media_seccion}")
         response.calificaciones = calificaciones_response
         return response
 
@@ -202,4 +280,33 @@ class BoletaService:
         return None
 
     def eliminar_boleta(self, boleta_id: int) -> bool:
+        # 1. Obtener la boleta para saber qué calificaciones eliminar
+        boleta = self.repository.get_by_id(boleta_id)
+        if not boleta:
+            return False
+            
+        # 2. Eliminar calificaciones SOLO si NO es boleta final (hasta_lapso < 3)
+        # Si es boleta final (hasta_lapso >= 3), NO eliminar calificaciones
+        if boleta.hasta_lapso < 3:
+            calificaciones = self.calif_repo.get_all_by_alumno_year(
+                boleta.alumno_id, boleta.anio_escolar
+            )
+            
+            for cal in calificaciones:
+                should_delete = False
+                
+                if boleta.hasta_lapso == 1 and cal.lapso_1_def is not None:
+                    # Si es boleta de lapso 1, eliminar la calificación completa
+                    should_delete = True
+                elif boleta.hasta_lapso == 2 and cal.lapso_2_def is not None:
+                    # Si es boleta de lapso 2, eliminar la calificación completa
+                    should_delete = True
+                    
+                if should_delete:
+                    # Eliminar la calificación completa para que no afecte promedios
+                    self.calif_repo.delete(cal.id)
+        else:
+            print(f"DEBUG: Boleta final (hasta_lapso={boleta.hasta_lapso}) - No se eliminan calificaciones")
+        
+        # 3. Eliminar la boleta
         return self.repository.delete(boleta_id)

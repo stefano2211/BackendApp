@@ -28,7 +28,7 @@ class CalificacionRepository:
         )
         return self.session.scalars(stmt).first()
 
-    def get_all_by_alumno_year(self, alumno_id: int, anio_escolar: str) -> List[Calificacion]:
+    def get_all_by_alumno_year(self, alumno_id: int, anio_escolar: str) -> list[Calificacion]:
         stmt = select(Calificacion).options(joinedload(Calificacion.materia)).where(
             Calificacion.alumno_id == alumno_id,
             Calificacion.anio_escolar == anio_escolar

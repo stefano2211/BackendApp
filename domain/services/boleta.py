@@ -140,34 +140,40 @@ class BoletaService:
         if not calificaciones:
             return
 
-        total_def_final = 0
-        materias_numericas_count = 0
-        sum_l1, count_l1 = 0, 0
-        sum_l2, count_l2 = 0, 0
-        sum_l3, count_l3 = 0, 0
+        # Tipado explícito para evitar lints
+        sum_l1: float = 0.0
+        count_l1: int = 0
+        sum_l2: float = 0.0
+        count_l2: int = 0
+        sum_l3: float = 0.0
+        count_l3: int = 0
+        
+        total_def_final: float = 0.0
+        materias_numericas_count: int = 0
 
         # El hasta_lapso viene en el dict (o default 3)
         hasta_lapso = data.get("hasta_lapso", 3)
 
         for calif in calificaciones:
-            es_numerica = calif.materia.es_numerica if calif.materia else True
+            materia = calif.materia
+            es_numerica = materia.es_numerica if materia else True
             if not es_numerica:
                 continue
 
             # Promedios acumulativos segun el limite solicitado (hasta_lapso)
             if hasta_lapso >= 1 and calif.lapso_1_def is not None:
-                sum_l1 += calif.lapso_1_def
+                sum_l1 += float(calif.lapso_1_def)
                 count_l1 += 1
             if hasta_lapso >= 2 and calif.lapso_2_def is not None:
-                sum_l2 += calif.lapso_2_def
+                sum_l2 += float(calif.lapso_2_def)
                 count_l2 += 1
             if hasta_lapso >= 3 and calif.lapso_3_def is not None:
-                sum_l3 += calif.lapso_3_def
+                sum_l3 += float(calif.lapso_3_def)
                 count_l3 += 1
                 
-            # Solo sumar al promedio global si estamos viendo el año completo o 3er lapso
-            if hasta_lapso >= 3 and calif.def_final is not None:
-                total_def_final += calif.def_final
+            # Siempre sumar al promedio global (corresponde al acumulado actual)
+            if calif.def_final is not None:
+                total_def_final += float(calif.def_final)
                 materias_numericas_count += 1
 
         # Asignar medias al diccionario
@@ -278,33 +284,12 @@ class BoletaService:
         return None
 
     def eliminar_boleta(self, boleta_id: int) -> bool:
-        # 1. Obtener la boleta para saber qué calificaciones eliminar
+        # 1. Obtener la boleta para verificar existencia
         boleta = self.repository.get_by_id(boleta_id)
         if not boleta:
             return False
             
-        # 2. Eliminar calificaciones SOLO si NO es boleta final (hasta_lapso < 3)
-        # Si es boleta final (hasta_lapso >= 3), NO eliminar calificaciones
-        if boleta.hasta_lapso < 3:
-            calificaciones = self.calif_repo.get_all_by_alumno_year(
-                boleta.alumno_id, boleta.anio_escolar
-            )
-            
-            for cal in calificaciones:
-                should_delete = False
-                
-                if boleta.hasta_lapso == 1 and cal.lapso_1_def is not None:
-                    # Si es boleta de lapso 1, eliminar la calificación completa
-                    should_delete = True
-                elif boleta.hasta_lapso == 2 and cal.lapso_2_def is not None:
-                    # Si es boleta de lapso 2, eliminar la calificación completa
-                    should_delete = True
-                    
-                if should_delete:
-                    # Eliminar la calificación completa para que no afecte promedios
-                    self.calif_repo.delete(cal.id)
-        else:
-            print(f"DEBUG: Boleta final (hasta_lapso={boleta.hasta_lapso}) - No se eliminan calificaciones")
+        print(f"DEBUG: Eliminando boleta {boleta_id} para alumno {boleta.alumno_id}. Las calificaciones se mantienen en la base de datos.")
         
-        # 3. Eliminar la boleta
+        # 2. Solo eliminamos el registro de la boleta, nunca las notas del alumno.
         return self.repository.delete(boleta_id)

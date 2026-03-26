@@ -17,6 +17,7 @@ class MateriaUpdate(BaseModel):
     nombre: Optional[str] = None
     grado: Optional[int] = None
     es_numerica: Optional[bool] = None
+    modalidad: Optional[str] = None
 
 
 class MateriaResponse(MateriaBase):

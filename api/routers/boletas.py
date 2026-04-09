@@ -19,11 +19,29 @@ def get_bulk_boletas_pdf(
     service: BoletaService = Depends(get_boleta_service),
     pdf_service: PDFService = Depends(get_pdf_service),
 ):
+    print(f"DEBUG: Buscando boletas bulk - Grado: {grado}, Sección: {seccion}, Año: {anio_escolar}, Tipo: {tipo_evaluacion}")
     boletas = service.obtener_boletas_bulk(grado, seccion, anio_escolar, tipo_evaluacion)
+    print(f"DEBUG: Se encontraron {len(boletas)} boletas")
     if not boletas:
-        raise HTTPException(status_code=404, detail="No se encontraron boletas para los criterios especificados")
-    
-    pdf_buffer = pdf_service.generar_bulk_boletas_pdf(boletas)
+        # Return empty PDF with message instead of 404
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from io import BytesIO
+        
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        p.setFont("Helvetica", 12)
+        p.drawString(100, 750, f"No se encontraron boletas para:")
+        p.drawString(100, 730, f"Grado: {grado}°")
+        p.drawString(100, 710, f"Sección: {seccion}")
+        p.drawString(100, 690, f"Año Escolar: {anio_escolar}")
+        p.drawString(100, 670, f"Tipo Evaluación: {tipo_evaluacion}")
+        p.save()
+        
+        buffer.seek(0)
+        pdf_buffer = buffer
+    else:
+        pdf_buffer = pdf_service.generar_bulk_boletas_pdf(boletas)
     
     filename = f"boletas_{grado}{seccion}_{anio_escolar.replace('/', '-')}.pdf"
     
